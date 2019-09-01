@@ -1,0 +1,766 @@
+# Initialization
+system_init()
+use_cartridge(0002)
+holdtime = 90000
+global holdtime, droplet
+
+#meta("reservoirs", RESERVOIRS)
+
+RESERVOIRS = RESERVOIRS + S_ALL_RESERVOIRS
+#DROPLET = 1
+
+def main():
+	hold_diluent_reservoirs()
+	hold_S_reservoirs()
+	hold_sample_reservoirs()
+	hold_phae_reservoirs()
+
+# GEN METHODS: Hold
+def wait_load():
+	wait(HOLDTIME)
+def hold_all_reservoirs():
+	on( 50, [e_142_322,e_179_301,e_212_752,e_220_301,e_227_816,e_229_752,e_238_816,e_245_752,e_250_816,e_261_301,e_262_752,e_270_816,e_279_752,e_289_445,e_289_449,e_290_816,e_295_752,e_317_445])
+def hold_S_reservoirs():
+	"""
+	Hold all S reservoir electrodes except the port
+	"""
+	on( 50, [e_289_445,e_289_449,e_317_445])
+	
+def hold_diluent_reservoirs():
+	"""
+	Hold diluent reservoir electrodes but not the top
+	"""
+	on(50, [e_142_322,e_179_301,e_220_301,e_261_301])
+def hold_sample_reservoirs():
+	"""
+	Hold sample reservoir electrodes
+	"""
+	on(50,  [e_227_816,e_238_816,e_250_816,e_270_816,e_290_816])
+def hold_sample_lane():
+	"""
+	Hold droplets on magnets, designed to be used with a merge
+	"""
+	on( 50, [e_234_449,e_247_449])
+	
+def hold_phae_reservoirs():
+	"""
+	holds all except the top two electrodes and port electrode
+	"""
+	on( 50, [e_212_752,e_229_752,e_245_752,e_262_752,e_279_752,e_295_752])
+
+def hold_feeder():
+	"""
+	holds feeder lane spots
+	"""	
+	on( 50, [e_165_449,e_165_491,e_165_532,e_165_574,e_165_615,e_165_656,e_165_698,e_165_740,e_165_781,e_165_823])
+
+# GEN METHODS: Setup & Shutdown
+def setup():
+	''''
+	Setup performs the following functions
+		initiates the motor deck
+		Sets the voltage
+		Gets the temperature
+		Sets up the fluorimeter
+		Merges wait load and holds reservoirs
+		Allows for the programmability of every variable
+	'''
+	#motor_id=< MOTOR_NONE | MOTOR_HRM | MOTOR_DECK >
+	#motor_cmd=< MOTION_STOP | MOTION_HOME | MOTION_ABSOLUTE | MOTION_DISPENSE | MOTION_UP | MOTION_DOWN >,
+	sp = 40
+	integration_time = 5000
+	FLUOR_LED_CURRENT = .002 # A 2 mA
+	thermal_setup(setpoint=sp, mode=1, pwm=100, p=800, i=1, d=100)
+	motor_cmd(motor_id= 2 ,motor_cmd= 4  ,motor_speed= 0 ,motor_position=0 )
+	wait(1000)
+	set_voltage(on_off=ON,mode=AC,voltage=300,frequency=30,settling_time=0,polarity=0)
+	wait(200)
+	get_timestamp(id="start_temp")
+	get_temp(id="start_temp")
+	get_timestamp(id="start_volt")
+	get_voltage(id="start_volt")
+	spectrometer_setup(integration_time=integration_time,led_current_amps=0.02,woi=432)
+	wait(500)
+	fluorimeter_setup(sample_rate=80000,samples_per_detection=32000,led_current_amps=FLUOR_LED_CURRENT,signal_periods_per_detection=467,calc_mode=3,led_togglemode=3)
+	wait(500)
+	merge(hold_reservoirs, wait_load)
+
+def shutdown():
+	#motor_id=< MOTOR_NONE | MOTOR_HRM | MOTOR_DECK >
+	#motor_cmd=< MOTION_STOP | MOTION_HOME | MOTION_ABSOLUTE | MOTION_DISPENSE | MOTION_UP | MOTION_DOWN >,
+	motor_cmd(motor_id= 2, motor_cmd= 5, motor_speed= 0, motor_position= 0)
+	set_voltage(on_off=OFF, mode=AC, voltage=0, frequency=30, settling_time=0, polarity=0)
+	get_timestamp(id="end_temp")	
+	get_temp(id="end_temp")
+	get_timestamp(id="end_volt")	
+	get_voltage(id="end_volt")
+	
+#  GEN METHODS: Diluent Methods
+def diluent_prime():
+	'''
+	for i in range(5):
+		on( 2000, [e_117_74,e_185_74,e_256_74,e_320_74,e_56_109])
+		on( 2000, [e_117_74,e_185_74,e_256_74,e_56_109])
+	'''
+	on( 5000, [e_117_74,e_185_74,e_256_74,e_56_109])
+	on( 5000, [e_117_74,e_185_74,e_18_109,e_18_146,e_18_184,e_256_74,e_56_109])
+	on( 2000, [e_117_74,e_185_74,e_18_109,e_18_146,e_18_184,e_56_109])
+	on( 3000, [e_117_74,e_18_109,e_18_146,e_18_184,e_56_109])
+	on( 2000, [e_117_74,e_18_109,e_18_146,e_18_184,e_18_222,e_56_109])
+	on( 5000, [e_117_74,e_18_109,e_18_146,e_18_184,e_18_222])
+	on( 2000, [e_117_74,e_185_74,e_18_146,e_18_184,e_18_222,e_18_260,e_26_272])
+def diluent_reset():
+	on( 1000, [e_117_74,e_185_74,e_18_146,e_18_184,e_18_222,e_18_260,e_26_272])
+	on( 2000, [e_117_74,e_185_74,e_18_146,e_18_184,e_18_222])
+	on( 2000, [e_117_74,e_185_74,e_18_109,e_18_146,e_18_184])
+	on( 4000, [e_117_74,e_18_109,e_18_146,e_18_184,e_56_109])
+	on( 3000, [e_117_74,e_185_74,e_56_109])
+	on( 3000, [e_117_74,e_185_74,e_256_74,e_56_109])
+	on( 3000, [e_117_74,e_185_74,e_256_74])
+	on( 3000, [e_117_74,e_185_74])
+	on( 3000, [e_117_74,e_185_74,e_56_109])
+	on( 4000, [e_117_74,e_18_109,e_18_146,e_18_184,e_56_109])
+	on( 3000, [e_117_74,e_185_74,e_56_109])
+	on( 3000, [e_117_74,e_185_74,e_256_74,e_56_109])
+	on( 3000, [e_117_74,e_185_74,e_256_74])
+def diluent_mix():
+	global ITERATIONS
+	for mix_iter in range(ITERATIONS):
+		transport(e_256_74,e_56_109,3,2500)
+		transport(e_56_109,e_256_74,3,2500)
+	
+def diluent_dispense():
+	global ITERATIONS
+	for iter in range(ITERATIONS):
+		rem = iter%6
+		if rem == 0:
+			on( 1000, [e_117_74,e_185_74,e_18_146,e_18_184,e_18_222,e_18_260,e_26_272])
+			on( 2000, [e_117_74,e_185_74,e_18_146,e_18_184,e_18_222])
+			on( 2000, [e_117_74,e_185_74,e_18_109,e_18_146,e_18_184])
+			on( 4000, [e_117_74,e_18_109,e_18_146,e_18_184,e_56_109])
+			on( 3000, [e_117_74,e_185_74,e_56_109])
+			on( 3000, [e_117_74,e_185_74,e_256_74,e_56_109])
+			on( 3000, [e_117_74,e_185_74,e_256_74])
+			on( 3000, [e_117_74,e_185_74])
+			on( 3000, [e_117_74,e_185_74,e_56_109])
+			on( 4000, [e_117_74,e_18_109,e_18_146,e_18_184,e_56_109])
+			on( 3000, [e_117_74,e_185_74,e_56_109])
+			on( 3000, [e_117_74,e_185_74,e_256_74,e_56_109])
+			on( 3000, [e_117_74,e_185_74,e_256_74])
+			on( 5000, [e_117_74,e_185_74,e_256_74,e_56_109])
+			on( 5000, [e_117_74,e_185_74,e_18_109,e_18_146,e_18_184,e_256_74,e_56_109])
+			on( 2000, [e_117_74,e_185_74,e_18_109,e_18_146,e_18_184,e_56_109])
+			on( 3000, [e_117_74,e_18_109,e_18_146,e_18_184,e_56_109])
+			on( 2000, [e_117_74,e_18_109,e_18_146,e_18_184,e_18_222,e_56_109])
+			on( 5000, [e_117_74,e_18_109,e_18_146,e_18_184,e_18_222])
+			on( 2000, [e_117_74,e_185_74,e_18_146,e_18_184,e_18_222,e_18_260,e_26_272])
+			
+			on( 2000, [e_117_74,e_185_74,e_18_184,e_18_222,e_18_260,e_26_272,e_26_295,e_71_317,e_94_362,e_94_430,e_94_498,e_94_566,e_94_634,e_94_702])
+			on( 2000, [e_117_74,e_185_74,e_18_222,e_18_260,e_26_272,e_26_295,e_26_317,e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724])
+			on( 2000, [e_117_74,e_185_74,e_18_146,e_18_184,e_18_222,e_18_260,e_26_272,e_26_317,e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724])
+			on( 2000, [e_117_74,e_185_74,e_18_109,e_18_146,e_18_184,e_18_222,e_18_260,e_26_272,e_26_317,e_94_340,e_94_408,e_94_475,e_94_543,e_94_611,e_94_679,e_94_747])
+			on( 500, [e_117_74,e_185_74,e_18_146,e_18_184,e_18_222,e_18_260,e_26_272,e_49_317,e_94_362,e_94_430,e_94_498,e_94_566,e_94_634,e_94_702,e_94_769])
+			on( 500, [e_117_74,e_185_74,e_18_146,e_18_184,e_18_222,e_18_260,e_26_272,e_71_317,e_94_362,e_94_430,e_94_498,e_94_566,e_94_634,e_94_702,e_94_769])
+		elif rem <=3:
+			on( 2000, [e_117_74,e_185_74,e_18_184,e_18_222,e_18_260,e_26_272,e_26_295,e_71_317,e_94_362,e_94_430,e_94_498,e_94_566,e_94_634,e_94_702])
+			on( 2000, [e_117_74,e_185_74,e_18_222,e_18_260,e_26_272,e_26_295,e_26_317,e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724])
+			on( 2000, [e_117_74,e_185_74,e_18_146,e_18_184,e_18_222,e_18_260,e_26_272,e_26_317,e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724])
+			on( 2000, [e_117_74,e_185_74,e_18_109,e_18_146,e_18_184,e_18_222,e_18_260,e_26_272,e_26_317,e_94_340,e_94_408,e_94_475,e_94_543,e_94_611,e_94_679,e_94_747])
+			on( 500, [e_117_74,e_185_74,e_18_146,e_18_184,e_18_222,e_18_260,e_26_272,e_49_317,e_94_362,e_94_430,e_94_498,e_94_566,e_94_634,e_94_702,e_94_769])
+			on( 500, [e_117_74,e_185_74,e_18_146,e_18_184,e_18_222,e_18_260,e_26_272,e_71_317,e_94_362,e_94_430,e_94_498,e_94_566,e_94_634,e_94_702,e_94_769])
+		elif rem>=4 and rem<6 :
+			on( 2000, [e_117_74,e_185_74,e_18_222,e_18_260,e_26_272,e_26_295,e_71_317,e_94_362,e_94_430,e_94_498,e_94_566,e_94_634,e_94_702])
+			on( 2000, [e_117_74,e_185_74,e_18_260,e_26_272,e_26_295,e_26_317,e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724])
+			on( 2000, [e_117_74,e_185_74,e_18_184,e_18_222,e_18_260,e_26_272,e_26_317,e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724])
+			on( 2000, [e_117_74,e_185_74,e_18_146,e_18_184,e_18_222,e_18_260,e_26_272,e_26_317,e_94_340,e_94_408,e_94_475,e_94_543,e_94_611,e_94_679,e_94_747])
+			on( 500, [e_117_74,e_185_74,e_18_184,e_18_222,e_18_260,e_26_272,e_49_317,e_94_362,e_94_430,e_94_498,e_94_566,e_94_634,e_94_702,e_94_769])
+			on( 500, [e_117_74,e_185_74,e_18_184,e_18_222,e_18_260,e_26_272,e_71_317,e_94_362,e_94_430,e_94_498,e_94_566,e_94_634,e_94_702,e_94_769])
+			
+#  GEN METHODS: Sample Methods
+def sample_prime():
+	transport(e_298_918,e_195_918,2,1500)
+	transport(e_195_918,e_298_918,2,1500)
+
+def sample_mix():
+	# Mike said don't go faster than 1500
+	global ITERATIONS
+	for mix_iter in range(ITERATIONS):
+		on( 1000, [e_162_943,e_162_951,e_195_918,e_214_918])		
+		on( 1000, [e_195_918,e_214_918,e_233_918])
+		on( 1000, [e_214_918,e_233_918,e_266_918])
+		on( 1000, [e_233_918,e_266_918,e_298_918])
+		on( 1000, [e_266_918,e_298_918])
+		on( 1000, [e_214_918,e_233_918,e_266_918])
+		on( 1000, [e_195_918,e_214_918,e_233_918])
+		on( 1000, [e_162_943,e_162_951,e_195_918,e_214_918])
+			
+def sample_dispense():
+	# Avoid having Drops Dispensed > 9
+	global ITERATIONS
+	for iter in range(ITERATIONS):
+		if iter%3 == 0:	
+			on( 1000, [e_162_943,e_162_951,e_195_918,e_94_340,e_94_408,e_94_475,e_94_543,e_94_611,e_94_679,e_94_747,e_94_815,e_94_883,e_94_951])
+			on( 1000, [e_195_918,e_94_340,e_94_408,e_94_475,e_94_543,e_94_611,e_94_679,e_94_747,e_94_815,e_94_883,e_94_951])
+			on( 1000, [e_195_918,e_214_918,e_94_340,e_94_408,e_94_475,e_94_543,e_94_611,e_94_679,e_94_747,e_94_815,e_94_883,e_94_951])
+			on( 1000, [e_214_918,e_233_918,e_94_340,e_94_408,e_94_475,e_94_543,e_94_611,e_94_679,e_94_747,e_94_815,e_94_883,e_94_951])
+			on( 1000, [e_233_918,e_266_918,e_94_340,e_94_408,e_94_475,e_94_543,e_94_611,e_94_679,e_94_747,e_94_815,e_94_883,e_94_951])
+			on( 1000, [e_266_918,e_298_918,e_94_340,e_94_408,e_94_475,e_94_543,e_94_611,e_94_679,e_94_747,e_94_815,e_94_883,e_94_951])
+			on( 1000, [e_233_918,e_266_918,e_94_340,e_94_408,e_94_475,e_94_543,e_94_611,e_94_679,e_94_747,e_94_815,e_94_883,e_94_951])
+			on( 1000, [e_214_918,e_233_918,e_94_340,e_94_408,e_94_475,e_94_543,e_94_611,e_94_679,e_94_747,e_94_815,e_94_883,e_94_951])
+			on( 1000, [e_195_918,e_214_918,e_94_340,e_94_408,e_94_475,e_94_543,e_94_611,e_94_679,e_94_747,e_94_815,e_94_883,e_94_951])
+		on( 2000, [e_162_943,e_162_951,e_195_918,e_94_408,e_94_475,e_94_543,e_94_611,e_94_679,e_94_747,e_94_815,e_94_883,e_94_951])
+		on( 1000, [e_139_951,e_162_943,e_162_951,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724,e_94_792,e_94_861,e_94_929])
+		on( 3500, [e_139_951,e_162_951,e_94_362,e_94_430,e_94_498,e_94_566,e_94_634,e_94_702,e_94_769,e_94_838,e_94_906])
+		on( 1500, [e_139_951,e_195_918,e_214_918,e_94_340,e_94_408,e_94_475,e_94_543,e_94_611,e_94_679,e_94_747,e_94_815,e_94_883])
+		on( 1000, [e_116_951,e_195_918,e_94_340,e_94_408,e_94_475,e_94_543,e_94_611,e_94_679,e_94_747,e_94_815,e_94_883])
+		on( 1000, [e_162_943,e_162_951,e_195_918,e_94_340,e_94_408,e_94_475,e_94_543,e_94_611,e_94_679,e_94_747,e_94_815,e_94_883,e_94_951])
+
+#  GEN METHODS:Movement Methods
+def move(path_electrodes, diluent_size, diluent_speed):
+	"""
+		Purpose: Generalizable movement of droplets as groups too
+		Assumes a start point diluent spot at
+			path_electrodes - array of arrays of electrodes to activate
+			diluent_size - int (integer) spread of droplets over space - default is 1
+			diluent_speed - int (integer) in ms that show how fast it should move a typical value - default is 500
+	"""\
+	#for key, value in kwargs.items():
+		#note(str(key) + 'value is: ' + str(value))
+	if diluent_speed < 250:
+		raise ValueError('You should be careful that you aren''t moving the droplets too fast')
+	note('A movement method is being completed')
+	steps = len(path_electrodes)+diluent_size-1
+	sequences = []
+	build_out = diluent_size
+	build_in = steps-diluent_size
+	current_size = 0
+	for step in range(steps):
+		temp = []
+		if step<build_out:
+			steps_to_combine = path_electrodes[0:current_size+1]
+			current_size += 1
+			for step in steps_to_combine:
+				temp += step
+			sequences.append(temp)
+		elif step>=build_out and step<build_in:
+			steps_to_combine = path_electrodes[step-build_out+1:step+1]
+			for step in steps_to_combine:
+				temp += step
+			sequences.append(temp)
+		elif step>=build_in:
+			if diluent_size >1:
+				steps_to_combine = path_electrodes[step-build_out+1:step-1+current_size]
+			else:
+				steps_to_combine = path_electrodes[step+1-build_out:step+current_size]
+			for step in steps_to_combine:
+				temp += step			
+			current_size-=1
+			sequences.append(temp)
+	for seq in sequences:
+		on(diluent_speed, seq)
+class Graph:
+    def __init__(self):
+	"""
+	constructor
+	nodes - (list) in a graph the nodes defined the points to check along the graph
+	edges - (defaultdict) defined as key, value pairs from one node to another, defines the relationships between the nodes
+	distances - (dict) keys are tuples of the node pairs and their values are ints of distances
+	"""
+	
+        from collections import defaultdict
+	self.nodes = []
+        self.edges = defaultdict(list)
+        self.distances = {}
+
+    def add_node(self, value):
+	"""
+	Adds single nodes to a graph
+	"""
+        self.nodes.append(value)
+
+    def add_nodes(self, values):
+	"""
+	Dumps a bunch of nodes in a graph
+	"""
+        self.nodes.extend(values)
+
+    def add_edge(self, from_node, to_node, distance):
+	"""
+	Populates the edge and distance properties
+	"""
+        self.edges[from_node].append(to_node)
+        self.edges[to_node].append(from_node)
+        self.distances[(from_node, to_node)] = distance
+        self.distances[(to_node, from_node)] = distance
+
+def transport(initial_node, final_node, droplet_size, droplet_speed):
+    """
+    graph object defined by the class Graph has node, edges, and distance properties
+    Commented and bug fixed algorithm based from here w/ additions for returning
+    a path
+    https://gist.github.com/econchick/4666413#file-gistfile1-py
+    """
+
+    # Specific definition for the 3382 cartridge - nodes index 0, segments  indices 1 & 2, distance 3 
+    graph_definiton = [['e_363_309', 'e_256_74', 'e_320_74', '1'], ['e_343_309', 'e_185_74', 'e_256_74', '1'], ['e_297_309', 'e_117_74', 'e_185_74', '1'], ['e_297_317', 'e_117_74', 'e_56_109', '1'], ['e_275_317', 'e_18_109', 'e_56_109', '3'], ['e_252_317', 'e_18_146', 'e_56_109', '2'], ['e_230_317', 'e_18_184', 'e_56_109', '1'], ['e_207_317', 'e_18_184', 'e_18_222', '1'], ['e_184_317', 'e_18_146', 'e_18_184', '1'], ['e_162_317', 'e_18_109', 'e_18_146', '1'], ['e_139_317', 'e_18_222', 'e_18_260', '1'], ['e_116_317', 'e_18_260', 'e_26_272', '1'], ['e_363_377', 'e_26_272', 'e_26_295', '1'], ['e_343_377', 'e_26_295', 'e_26_317', '1'], ['e_297_377', 'e_26_317', 'e_49_317', '1'], ['e_297_385', 'e_26_317', 'e_26_340', '1'], ['e_275_385', 'e_26_340', 'e_26_362', '1'], ['e_252_385', 'e_26_362', 'e_26_385', '1'], ['e_230_385', 'e_26_385', 'e_26_408', '1'], ['e_207_385', 'e_26_408', 'e_26_430', '1'], ['e_184_385', 'e_26_430', 'e_26_453', '1'], ['e_162_385', 'e_26_453', 'e_49_453', '1'], ['e_139_385', 'e_26_453', 'e_26_475', '1'], ['e_116_385', 'e_26_475', 'e_26_498', '1'], ['e_363_445', 'e_26_498', 'e_26_521', '1'], ['e_343_445', 'e_26_521', 'e_49_521', '1'], ['e_297_445', 'e_26_521', 'e_26_543', '1'], ['e_297_453', 'e_26_543', 'e_26_566', '1'], ['e_275_453', 'e_26_566', 'e_26_588', '1'], ['e_252_453', 'e_26_588', 'e_26_611', '1'], ['e_230_453', 'e_26_611', 'e_26_634', '1'], ['e_207_453', 'e_26_634', 'e_26_656', '1'], ['e_184_453', 'e_26_656', 'e_49_656', '1'], ['e_162_453', 'e_26_656', 'e_26_679', '1'], ['e_139_453', 'e_26_679', 'e_26_702', '1'], ['e_116_453', 'e_26_702', 'e_26_724', '1'], ['e_363_513', 'e_26_724', 'e_49_724', '1'], ['e_343_513', 'e_26_724', 'e_26_747', '1'], ['e_297_513', 'e_26_747', 'e_26_769', '1'], ['e_297_521', 'e_26_769', 'e_26_792', '1'], ['e_275_521', 'e_26_792', 'e_26_815', '1'], ['e_252_521', 'e_26_815', 'e_26_838', '1'], ['e_230_521', 'e_26_838', 'e_26_861', '1'], ['e_207_521', 'e_26_861', 'e_49_861', '1'], ['e_184_521', 'e_49_861', 'e_71_861', '1'], ['e_162_521', 'e_49_724', 'e_71_724', '1'], ['e_139_521', 'e_49_656', 'e_71_656', '1'], ['e_116_521', 'e_49_521', 'e_71_521', '1'], ['e_363_581', 'e_49_453', 'e_71_453', '1'], ['e_343_581', 'e_49_317', 'e_71_317', '1'], ['e_297_581', 'e_71_317', 'e_94_317', '1'], ['e_297_588', 'e_94_317', 'e_94_340', '1'], ['e_275_588', 'e_94_340', 'e_94_362', '1'], ['e_252_588', 'e_94_362', 'e_94_385', '1'], ['e_230_588', 'e_94_385', 'e_94_408', '1'], ['e_207_588', 'e_94_408', 'e_94_430', '1'], ['e_184_588', 'e_94_430', 'e_94_453', '1'], ['e_162_588', 'e_71_453', 'e_94_453', '1'], ['e_139_588', 'e_94_453', 'e_94_475', '1'], ['e_116_588', 'e_94_475', 'e_94_498', '1'], ['e_363_649', 'e_94_498', 'e_94_521', '1'], ['e_343_649', 'e_71_521', 'e_94_521', '1'], ['e_297_649', 'e_94_521', 'e_94_543', '1'], ['e_297_656', 'e_94_543', 'e_94_566', '1'], ['e_275_656', 'e_94_566', 'e_94_588', '1'], ['e_252_656', 'e_94_588', 'e_94_611', '1'], ['e_230_656', 'e_94_611', 'e_94_634', '1'], ['e_207_656', 'e_94_634', 'e_94_656', '1'], ['e_184_656', 'e_71_656', 'e_94_656', '1'], ['e_162_656', 'e_94_656', 'e_94_679', '1'], ['e_139_656', 'e_94_679', 'e_94_702', '1'], ['e_116_656', 'e_94_702', 'e_94_724', '1'], ['e_363_717', 'e_71_724', 'e_94_724', '1'], ['e_343_717', 'e_94_724', 'e_94_747', '1'], ['e_297_717', 'e_94_747', 'e_94_769', '1'], ['e_297_724', 'e_94_769', 'e_94_792', '1'], ['e_275_724', 'e_94_792', 'e_94_815', '1'], ['e_252_724', 'e_94_815', 'e_94_838', '1'], ['e_230_724', 'e_94_838', 'e_94_861', '1'], ['e_207_724', 'e_71_861', 'e_94_861', '1'], ['e_184_724', 'e_116_317', 'e_94_317', '1'], ['e_162_724', 'e_116_317', 'e_139_317', '1'], ['e_139_724', 'e_139_317', 'e_162_317', '1'], ['e_116_724', 'e_162_317', 'e_184_317', '1'], ['e_352_814', 'e_184_317', 'e_207_317', '1'], ['e_325_814', 'e_207_317', 'e_230_317', '1'], ['e_297_814', 'e_230_317', 'e_252_317', '1'], ['e_270_814', 'e_252_317', 'e_275_317', '1'], ['e_243_814', 'e_275_317', 'e_297_317', '1'], ['e_215_814', 'e_297_309', 'e_297_317', '1'], ['e_184_826', 'e_297_309', 'e_343_309', '1'], ['e_184_838', 'e_343_309', 'e_363_309', '1'], ['e_162_838', 'e_343_377', 'e_363_377', '1'], ['e_139_838', 'e_297_377', 'e_343_377', '1'], ['e_116_838', 'e_297_377', 'e_297_385', '1'], ['e_331_918', 'e_275_385', 'e_297_385', '1'], ['e_298_918', 'e_252_385', 'e_275_385', '1'], ['e_266_918', 'e_230_385', 'e_252_385', '1'], ['e_233_918', 'e_207_385', 'e_230_385', '1'], ['e_214_918', 'e_184_385', 'e_207_385', '1'], ['e_195_918', 'e_162_385', 'e_184_385', '1'], ['e_162_943', 'e_139_385', 'e_162_385', '1'], ['e_162_951', 'e_116_385', 'e_139_385', '1'], ['e_139_951', 'e_116_385', 'e_94_385', '1'], ['e_116_951', 'e_116_453', 'e_94_453', '1'], ['e_94_317', 'e_116_453', 'e_139_453', '1'], ['e_94_340', 'e_139_453', 'e_162_453', '1'], ['e_94_362', 'e_162_453', 'e_184_453', '1'], ['e_94_385', 'e_184_453', 'e_207_453', '1'], ['e_94_408', 'e_207_453', 'e_230_453', '1'], ['e_94_430', 'e_230_453', 'e_252_453', '1'], ['e_94_453', 'e_252_453', 'e_275_453', '1'], ['e_94_475', 'e_275_453', 'e_297_453', '1'], ['e_94_498', 'e_297_445', 'e_297_453', '1'], ['e_94_521', 'e_297_445', 'e_343_445', '1'], ['e_94_543', 'e_343_445', 'e_363_445', '1'], ['e_94_566', 'e_343_513', 'e_363_513', '1'], ['e_94_588', 'e_297_513', 'e_343_513', '1'], ['e_94_611', 'e_297_513', 'e_297_521', '1'], ['e_94_634', 'e_275_521', 'e_297_521', '1'], ['e_94_656', 'e_252_521', 'e_275_521', '1'], ['e_94_679', 'e_230_521', 'e_252_521', '1'], ['e_94_702', 'e_207_521', 'e_230_521', '1'], ['e_94_724', 'e_184_521', 'e_207_521', '1'], ['e_94_747', 'e_162_521', 'e_184_521', '1'], ['e_94_769', 'e_139_521', 'e_162_521', '1'], ['e_94_792', 'e_116_521', 'e_139_521', '1'], ['e_94_815', 'e_116_521', 'e_94_521', '1'], ['e_94_838', 'e_116_588', 'e_94_588', '1'], ['e_94_861', 'e_116_588', 'e_139_588', '1'], ['e_94_883', 'e_139_588', 'e_162_588', '1'], ['e_94_906', 'e_162_588', 'e_184_588', '1'], ['e_94_929', 'e_184_588', 'e_207_588', '1'], ['e_94_951', 'e_207_588', 'e_230_588', '1'], ['e_71_317', 'e_230_588', 'e_252_588', '1'], ['e_71_453', 'e_252_588', 'e_275_588', '1'], ['e_71_521', 'e_275_588', 'e_297_588', '1'], ['e_71_656', 'e_297_581', 'e_297_588', '1'], ['e_71_724', 'e_297_581', 'e_343_581', '1'], ['e_71_861', 'e_343_581', 'e_363_581', '1'], ['e_49_317', 'e_343_649', 'e_363_649', '1'], ['e_49_453', 'e_297_649', 'e_343_649', '1'], ['e_49_521', 'e_297_649', 'e_297_656', '1'], ['e_49_656', 'e_275_656', 'e_297_656', '1'], ['e_49_724', 'e_252_656', 'e_275_656', '1'], ['e_49_861', 'e_230_656', 'e_252_656', '1'], ['e_26_317', 'e_207_656', 'e_230_656', '1'], ['e_26_340', 'e_184_656', 'e_207_656', '1'], ['e_26_362', 'e_162_656', 'e_184_656', '1'], ['e_26_385', 'e_139_656', 'e_162_656', '1'], ['e_26_408', 'e_116_656', 'e_139_656', '1'], ['e_26_430', 'e_116_656', 'e_94_656', '1'], ['e_26_453', 'e_116_724', 'e_94_724', '1'], ['e_26_475', 'e_116_724', 'e_139_724', '1'], ['e_26_498', 'e_139_724', 'e_162_724', '1'], ['e_26_521', 'e_162_724', 'e_184_724', '1'], ['e_26_543', 'e_184_724', 'e_207_724', '1'], ['e_26_566', 'e_207_724', 'e_230_724', '1'], ['e_26_588', 'e_230_724', 'e_252_724', '1'], ['e_26_611', 'e_252_724', 'e_275_724', '1'], ['e_26_634', 'e_275_724', 'e_297_724', '1'], ['e_26_656', 'e_297_717', 'e_297_724', '1'], ['e_26_679', 'e_297_717', 'e_343_717', '1'], ['e_26_702', 'e_343_717', 'e_363_717', '1'], ['e_26_724', 'e_116_838', 'e_94_838', '1'], ['e_26_747', 'e_116_838', 'e_139_838', '1'], ['e_26_769', 'e_139_838', 'e_162_838', '1'], ['e_26_792', 'e_162_838', 'e_184_838', '1'], ['e_26_815', 'e_184_826', 'e_184_838', '1'], ['e_26_838', 'e_184_826', 'e_215_814', '1'], ['e_26_861', 'e_215_814', 'e_243_814', '1'], ['e_320_74', 'e_243_814', 'e_270_814', '1'], ['e_256_74', 'e_270_814', 'e_297_814', '1'], ['e_185_74', 'e_297_814', 'e_325_814', '1'], ['e_117_74', 'e_325_814', 'e_352_814', '1'], ['e_56_109', 'e_94_861', 'e_94_883', '1'], ['e_18_109', 'e_94_883', 'e_94_906', '1'], ['e_18_146', 'e_94_906', 'e_94_929', '1'], ['e_18_184', 'e_94_929', 'e_94_951', '1'], ['e_18_222', 'e_116_951', 'e_94_951', '1'], ['e_18_260', 'e_116_951', 'e_139_951', '1'], ['e_26_272', 'e_139_951', 'e_162_951', '1'], ['e_26_295', 'e_162_943', 'e_162_951', '1'], ['', 'e_162_943', 'e_195_918', '1'], ['', 'e_195_918', 'e_214_918', '1'], ['', 'e_214_918', 'e_233_918', '1'], ['', 'e_233_918', 'e_266_918', '1'], ['', 'e_266_918', 'e_298_918', '1'], ['', 'e_298_918', 'e_331_918', '1']]
+    # graph object needs edges and nodes predefined, done here
+    graph = Graph()
+    graph.add_nodes([line[0] for line in graph_definiton])
+    segment_info = [line[1:4] for line in graph_definiton]
+    for iter, seg in enumerate(segment_info):
+	graph.add_edge(seg[0], seg[1], int(seg[2]))
+
+    visited = {initial_node: 0}
+    path = {}
+
+    nodes = graph.nodes
+    while nodes:
+        min_node = None
+        for node in nodes:
+            if node in visited:
+                if min_node is None:
+                    min_node = node
+                elif visited[node] < visited[min_node]:
+                    min_node = node
+
+        if min_node is None:
+            break
+
+        # takes out the minimum node which was just assigned
+        nodes.remove(min_node)
+        current_weight = visited[min_node]
+        for edge in graph.edges[min_node]:
+            # go throuch each edge attached to the min node
+            weight = current_weight + graph.distances[(min_node, edge)]
+            if edge not in visited or weight < visited[edge]:
+                # if it hasn't been visited or the weight is lower to get to that nade add it to visited
+                visited[edge] = weight
+                path[edge] = min_node
+
+    # routes back from final node to the start node 
+    shortest_path = []
+    note(str(path))
+    next_connection = path[final_node]
+    shortest_path.append(final_node)
+    shortest_path.append(next_connection)
+    while initial_node not in shortest_path:
+	# breaks when it gets back to the initial node,
+	# otherwise, keep routing from node back to its shortest edge
+	    next_connection = path[next_connection]
+	    shortest_path.append(next_connection)
+    pathway = [[i] for i in shortest_path]
+    move(pathway, droplet_size, droplet_speed)
+#  GEN METHODS:S Reservoir & Lane Movement
+def S_dispense():
+	"""
+	lanes - list of strings input - Values S1-S7 - small reservoir dispensing
+	iterations- integer (int) input - as many values
+	error handling exists
+	"""
+	global ITERATIONS, LANES
+	note('adapted from Mikes Fluor_Cal_Curve Dolfin Script')
+	optional_lanes = ["S1", "S2","S3","S4", "S5", "S6", "S7"]
+	note('you added the following lanes: ' + ', '.join(LANES))
+	
+	electrode_dict = {"S1":[e_297_717],"S2":[e_297_649],"S3":[e_297_581], "S4":[e_297_513], "S5":  [e_297_445], "S6": [e_297_377], "S7":  [e_297_309]}	
+	
+	# Error Handling & establishing the lane electrodes
+	lane_associated_electrodes = []
+	for lane in LANES:
+		if lane not in optional_lanes:
+			raise ValueError("Error associated with incorrect small reservoir input")
+		else:
+			lane_associated_electrodes.extend(electrode_dict[lane]) 
+	turns_off_sim = []
+	for key in electrode_dict.keys():
+		if key not in LANES:
+			turns_off_sim.extend(electrode_dict[key])
+	turn_off_cycle = turns_off_sim + [e_343_309,e_363_309]
+	if ITERATIONS > 2:
+		note('NOT ADVISABLE TO DISPENSE MORE THAN TWO DROPLETS AT A TIME')
+	note('PASSED ERROR HANDLING DISPENSE SMALL RESERVOIR')
+	# Creating the cycle
+	dispense_cycle = [[e_297_317,e_343_309,e_363_309, e_207_317], [e_207_317,e_297_317,e_343_309], [e_297_317, e_207_317],  [e_275_317,e_297_317, e_207_317],  [e_252_317,e_275_317,e_297_317, e_207_317], [e_252_317,e_297_317, e_207_317], [e_230_317,e_297_317,e_343_377, e_207_317], [e_207_317,e_297_317,e_343_377,e_363_377, e_207_317]]
+	on(50, turn_off_cycle)
+	on( 500, [e_207_317,e_343_309,e_363_309])
+	for i, seq in enumerate(dispense_cycle):
+		dispense_cycle[i] =  dispense_cycle[i] + lane_associated_electrodes
+	times_one = [5000, 3500, 1000, 1000, 1000, 1500, 1500, 500]
+	for iter in range(ITERATIONS):
+		for i, seq in enumerate(dispense_cycle):
+			on(times_one[i], seq)
+	on( 1000, [e_207_317,e_343_309,e_363_309])
+	
+def S_prime():
+	global ITERATIONS, DROPLET_SPEED
+	for i in range(ITERATIONS):
+		on( DROPLET_SPEED, [e_343_309,e_363_309])
+		on( DROPLET_SPEED, [e_343_309])
+		on( DROPLET_SPEED, [e_343_309,e_363_309])
+		on( DROPLET_SPEED, [e_343_309])
+		on( DROPLET_SPEED, [e_343_309,e_363_309])
+		on( DROPLET_SPEED, [e_343_309])
+		on( DROPLET_SPEED, [e_343_309,e_363_309])
+		on( DROPLET_SPEED, [e_343_309])
+		on( DROPLET_SPEED, [e_343_309,e_363_309])
+		on( DROPLET_SPEED, [e_343_309])
+		on( DROPLET_SPEED, [e_297_309,e_297_377,e_297_445,e_297_513,e_297_581,e_297_649,e_297_717,e_343_309])
+		on( DROPLET_SPEED, [e_343_309])
+		on( DROPLET_SPEED, [e_297_309,e_297_377,e_297_445,e_297_513,e_297_581,e_297_649,e_297_717,e_343_309])
+		on( DROPLET_SPEED, [e_343_309])
+def move_up():
+	global DROPLET_SIZE, DROPLET_SPEED
+	diluent_size = DROPLET_SIZE
+	diluent_speed = DROPLET_SPEED
+	note('Moving up to feeding lane as a ' + str(diluent_size) + ' DU sized drop and at a speed of '  + str(diluent_speed) + ' ms')
+	path_electrodes = [[e_207_521], [e_184_521],[e_162_521],[e_139_521], [e_116_317,e_116_385,e_116_453,e_116_521,e_116_588,e_116_656,e_116_724], [e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724]]
+	move(path_electrodes, diluent_size, diluent_speed)
+	
+def move_down():
+	global DROPLET_SIZE, DROPLET_SPEED
+	diluent_size = DROPLET_SIZE
+	diluent_speed = DROPLET_SPEED
+	note('Moving down to home spot as a ' + str(diluent_size) + ' DU sized drop and at a speed of '  + str(diluent_speed) + ' ms')
+	path_electrodes = [[e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724],[e_116_317,e_116_385,e_116_453,e_116_521,e_116_588,e_116_656,e_116_724],[e_139_521],[e_162_521], [e_184_521],[e_207_521]]
+	move(path_electrodes, diluent_size, diluent_speed)
+
+def mix_lanes():
+	global DROPLET_SIZE, DROPLET_SPEED, ITERATIONS
+	diluent_size = DROPLET_SIZE
+	diluent_speed = DROPLET_SPEED
+	iterations = ITERATIONS
+	note('Mixing lanes as a '+ str(diluent_size) + ' DU sized drop and at a speed of '  + str(diluent_speed) + ' ms ' + str(iterations) + ' times')
+	path_electrodes = [[e_207_521], [e_184_521],[e_162_521],[e_139_521], [e_116_317,e_116_385,e_116_453,e_116_521,e_116_588,e_116_656,e_116_724], [e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724], [e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724],[e_116_317,e_116_385,e_116_453,e_116_521,e_116_588,e_116_656,e_116_724],[e_139_521],[e_162_521], [e_184_521],[e_207_521], [e_230_317], [e_252_317], [e_275_317],  [e_252_317], [e_230_317],  [e_207_317]]
+	for i in range(iterations):
+		move(path_electrodes, diluent_size, diluent_speed)
+# GEN METHODS: PHAE Reservoir
+	global DROPLET_SIZE, DROPLET_SPEED, ITERATIONS
+	diluent_size = DROPLET_SIZE
+	diluent_speed = DROPLET_SPEED
+	iterations = ITERATIONS
+	note('Mixing lanes as a '+ str(diluent_size) + ' DU sized drop and at a speed of '  + str(diluent_speed) + ' ms ' + str(iterations) + ' times')
+	path_electrodes = [[e_207_521], [e_184_521],[e_162_521],[e_139_521], [e_116_317,e_116_385,e_116_453,e_116_521,e_116_588,e_116_656,e_116_724], [e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724], [e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724],[e_116_317,e_116_385,e_116_453,e_116_521,e_116_588,e_116_656,e_116_724],[e_139_521],[e_162_521], [e_184_521],[e_207_521], [e_230_317], [e_252_317], [e_275_317],  [e_252_317], [e_230_317],  [e_207_317]]
+	for i in range(iterations):
+		move(path_electrodes, diluent_size, diluent_speed)
+# GEN METHODS: PHAE Reservoir
+def PHAE_prime():
+	on( 500, [e_297_814,e_325_814])
+	on( 500, [e_270_814,e_297_814,e_325_814])
+	on( 500, [e_243_814,e_270_814,e_297_814])
+	on( 500, [e_215_814,e_243_814,e_270_814])
+	on( 500, [e_184_826,e_215_814,e_243_814,e_270_814])
+	on( 500, [e_184_826,e_215_814,e_243_814,e_270_814,e_297_814])
+	on( 500, [e_184_826,e_215_814,e_243_814,e_270_814,e_297_814,e_325_814])
+	
+def PHAE_mix():
+	global ITERATIONS, DROPLET_SPEED
+	for mix_iter in range(ITERATIONS):
+		transport(e_297_814,e_184_826,3,DROPLET_SPEED)
+		transport(e_184_826,e_297_814,3,DROPLET_SPEED)
+
+def PHAE_dispense():	
+	global ITERATIONS
+	for i in range(ITERATIONS):
+		# will remix with every single dispense
+		on( 1000, [e_184_826,e_215_814,e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724,e_94_792,e_94_861])
+		on( 1000, [e_184_826,e_215_814,e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724,e_94_792,e_94_861])
+		on( 1000, [e_215_814,e_243_814,e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724,e_94_792,e_94_861])
+		on( 1000, [e_243_814,e_270_814,e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724,e_94_792,e_94_861])
+		on( 1000, [e_270_814,e_297_814,e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724,e_94_792,e_94_861])
+		on( 1000, [e_297_814,e_325_814,e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724,e_94_792,e_94_861])
+		on( 1000, [e_270_814,e_297_814,e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724,e_94_792,e_94_861])
+		on( 1000, [e_243_814,e_270_814,e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724,e_94_792,e_94_861])
+		on( 1000, [e_215_814,e_243_814,e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724,e_94_792,e_94_861])
+		on( 1000, [e_184_826,e_184_838,e_215_814,e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724,e_94_792,e_94_861])
+		on( 2000, [e_184_826,e_184_838,e_215_814,e_94_362,e_94_430,e_94_498,e_94_566,e_94_634,e_94_702,e_94_769,e_94_838])
+		on( 1000, [e_184_826,e_184_838,e_94_340,e_94_408,e_94_475,e_94_543,e_94_611,e_94_679,e_94_747,e_94_815])
+		on( 1000, [e_162_838,e_184_826,e_184_838,e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724,e_94_792])
+		on( 1000, [e_139_838,e_162_838,e_184_826,e_184_838,e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724,e_94_792])
+		on( 2000, [e_139_838,e_184_826,e_184_838,e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724,e_94_792])
+		on( 2000, [e_139_838,e_184_826,e_184_838,e_215_814,e_243_814,e_270_814,e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724,e_94_792])
+		on( 1000, [e_116_838,e_184_826,e_184_838,e_215_814,e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724,e_94_792])
+		on( 1000, [e_184_826,e_184_838,e_215_814,e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724,e_94_792,e_94_838])
+		on( 1000, [e_184_826,e_184_838,e_215_814,e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724,e_94_792,e_94_861])
+		
+#  GEN METHODS:FEEDER Lane Movement
+def hold_feeder_lane():
+	on( 2000, [e_195_918,e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724,e_94_792,e_94_861,e_94_929])
+def move_right():
+	global DROPLET_SIZE, DROPLET_SPEED, ITERATIONS
+	diluent_size = 1
+	diluent_speed = DROPLET_SPEED
+	iterations = ITERATIONS
+	note('Moving RIGHT as a '+ str(diluent_size) + ' DU sized drop and at a speed of '  + str(diluent_speed) + ' ms ' + str(iterations) + ' times')
+	path_electrodes = [[e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724,e_94_792,e_94_861],[e_94_340,e_94_408,e_94_475,e_94_543,e_94_611,e_94_679,e_94_747,e_94_815,e_94_883],[e_94_362,e_94_430,e_94_498,e_94_566,e_94_634,e_94_702,e_94_769,e_94_838,e_94_906],  [e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724,e_94_792,e_94_861,e_94_929]]
+	for i in range(iterations):
+		move(path_electrodes, diluent_size, diluent_speed)
+
+def move_left():
+	global DROPLET_SIZE, DROPLET_SPEED, ITERATIONS
+	diluent_size = 1
+	diluent_speed = DROPLET_SPEED
+	iterations = ITERATIONS
+	note('Moving LEFT as a '+ str(diluent_size) + ' DU sized drop and at a speed of '  + str(diluent_speed) + ' ms ' + str(iterations) + ' times')
+	path_electrodes = [[e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724,e_94_792,e_94_861],[e_94_340,e_94_408,e_94_475,e_94_543,e_94_611,e_94_679,e_94_747,e_94_815,e_94_883],[e_94_362,e_94_430,e_94_498,e_94_566,e_94_634,e_94_702,e_94_769,e_94_838,e_94_906],  [e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724,e_94_792,e_94_861,e_94_929]]
+	path_electrodes.reverse()
+	for i in range(iterations):
+		move(path_electrodes, diluent_size, diluent_speed)
+#  GEN METHODS:LOOP MOVEMENT
+def left_loop():
+	global DROPLET_SIZE, DROPLET_SPEED, ITERATIONS, REVERSED
+	diluent_size = DROPLET_SIZE
+	diluent_speed = DROPLET_SPEED
+	iterations = ITERATIONS
+	reversed = REVERSED
+	path_electrodes = [[e_26_385,e_94_317,e_94_453], [e_26_362,e_71_453,e_94_340], [e_26_340,e_49_453,e_94_362], [e_26_317,e_26_453,e_94_385], [e_26_430,e_49_317,e_94_408], [e_26_408,e_71_317,e_94_430], [e_26_385,e_94_317,e_94_453]]
+	if reversed:
+		path_electrodes.reverse()
+	note('LEFT LOOP Circle as a '+ str(diluent_size) + ' DU sized drop and at a speed of '  + str(diluent_speed) + ' ms ' + str(iterations) + ' times')
+	for i in range(iterations):
+		move(path_electrodes, diluent_size, diluent_speed)
+
+def middle_loop():
+	global DROPLET_SIZE, DROPLET_SPEED, ITERATIONS, REVERSED
+	diluent_size = DROPLET_SIZE
+	diluent_speed = DROPLET_SPEED
+	iterations = ITERATIONS
+	reversed = REVERSED
+	path_electrodes = [ [e_26_588,e_94_521,e_94_656], [e_26_566,e_71_656,e_94_543], [e_26_543,e_49_656,e_94_566], [e_26_521,e_26_656,e_94_588], [e_26_634,e_49_521,e_94_611], [e_26_611,e_71_521,e_94_634], [e_26_588,e_94_521,e_94_656]]
+	if reversed:
+		path_electrodes.reverse()
+	note('MIDDLE LOOP Circle as a '+ str(diluent_size) + ' DU sized drop and at a speed of '  + str(diluent_speed) + ' ms ' + str(iterations) + ' times')
+	for i in range(iterations):
+		move(path_electrodes, diluent_size, diluent_speed)
+
+
+def right_loop():
+	global DROPLET_SIZE, DROPLET_SPEED, LOOP_ITERATIONS, DROPLET
+	path_electrodes_to_detect = [[e_26_724,e_26_861,e_94_792],  [e_26_747,e_49_861,e_94_769], [e_26_769,e_71_861,e_94_747], [e_26_792,e_94_724,e_94_861]]
+	path_electrodes_reset = [[e_26_792,e_94_724,e_94_861], [e_26_815,e_71_724,e_94_838], [e_26_838,e_49_724,e_94_815], [e_26_724,e_26_861,e_94_792]]	
+	note('RIGHT LOOP Circle as a '+ str(DROPLET_SIZE) + ' DU sized drop and at a speed of '  + str(DROPLET_SPEED) + ' ms ' + str(LOOP_ITERATIONS) + ' times')
+	
+	for i in range(LOOP_ITERATIONS):
+		stamp = 'drop_'+str(DROPLET)+'_background_'+str(i)
+		get_timestamp(id=stamp)
+		fluor_read(stamp)
+		move(path_electrodes_to_detect, DROPLET_SIZE, DROPLET_SPEED)
+		stamp = 'drop_'+str(DROPLET)+'_detection_'+str(i)
+		get_timestamp(id=stamp)
+		fluor_read(stamp)
+		move(path_electrodes_reset, DROPLET_SIZE, DROPLET_SPEED)
+		stamp = 'drop_'+str(DROPLET+1)+'_background_'+str(i)
+		get_timestamp(id=stamp)
+		fluor_read(stamp)
+		move(path_electrodes_to_detect, DROPLET_SIZE, DROPLET_SPEED)
+		stamp = 'drop_'+str(DROPLET+1)+'_detection_'+str(i)		
+		get_timestamp(id=stamp)
+		fluor_read(stamp)
+		move(path_electrodes_reset, DROPLET_SIZE, DROPLET_SPEED)
+		stamp = 'drop_'+str(DROPLET+2)+'_background_'+str(i)	
+		get_timestamp(id=stamp)
+		fluor_read(stamp)
+		move(path_electrodes_to_detect, DROPLET_SIZE, DROPLET_SPEED)
+		stamp = 'drop_'+str(DROPLET+2)+'_detection_'+str(i)
+		get_timestamp(id=stamp)	
+		fluor_read(stamp)
+		move(path_electrodes_reset, DROPLET_SIZE, DROPLET_SPEED)
+		
+
+def four_right_loop():
+	global LOOP_ITERATIONS, DROPLET
+	for i in range(LOOP_ITERATIONS):
+		stamp = 'drop_'+str(DROPLET)+'_background_'+str(i)
+		get_timestamp(id=stamp)
+		fluor_read(stamp)
+		
+		on( 500, [e_26_724,e_26_861,e_94_724,e_94_861])
+		on( 500, [e_26_724,e_26_861,e_94_724,e_94_747,e_94_861])
+		on( 500, [e_26_724,e_26_861,e_94_747,e_94_769,e_94_861])
+		on( 500, [e_26_724,e_26_838,e_26_861,e_49_724,e_94_769,e_94_792,e_94_861])
+		on( 500, [e_26_815,e_26_838,e_49_724,e_71_724,e_94_792,e_94_861])
+		on( 500, [e_26_815,e_26_838,e_49_724,e_71_724,e_71_861,e_94_792,e_94_861])
+		on( 500, [e_26_792,e_26_815,e_71_724,e_71_861,e_94_724,e_94_792,e_94_861])
+		on( 500, [e_26_792,e_49_861,e_71_861,e_94_724,e_94_792])
+		on( 500, [e_26_792,e_26_861,e_49_861,e_94_724,e_94_792])
+		on( 500, [e_26_792,e_26_861,e_94_724,e_94_792])
+		
+		stamp = 'drop_'+str(DROPLET)+'_detection_'+str(i)
+		get_timestamp(id=stamp)
+		fluor_read(stamp)
+		
+		on( 500, [e_26_769,e_26_861,e_94_724,e_94_792,e_94_815])
+		on( 500, [e_26_747,e_26_769,e_26_861,e_49_861,e_94_724,e_94_792,e_94_815])
+		on( 500, [e_26_724,e_26_747,e_26_861,e_49_861,e_94_724,e_94_792,e_94_815])
+		on( 500, [e_26_724,e_26_861,e_94_724,e_94_815,e_94_838])
+		on( 500, [e_26_724,e_26_861,e_94_724,e_94_838,e_94_861])
+		on( 500, [e_26_724,e_26_861,e_94_724,e_94_861])
+
+		stamp = 'drop_'+str(DROPLET+1)+'_background_'+str(i)
+		get_timestamp(id=stamp)
+		fluor_read(stamp)
+
+		on( 500, [e_26_724,e_26_861,e_94_724,e_94_861])
+		on( 500, [e_26_724,e_26_861,e_94_724,e_94_747,e_94_861])
+		on( 500, [e_26_724,e_26_861,e_94_747,e_94_769,e_94_861])
+		on( 500, [e_26_724,e_26_838,e_26_861,e_49_724,e_94_769,e_94_792,e_94_861])
+		on( 500, [e_26_815,e_26_838,e_49_724,e_71_724,e_94_792,e_94_861])
+		on( 500, [e_26_815,e_26_838,e_49_724,e_71_724,e_71_861,e_94_792,e_94_861])
+		on( 500, [e_26_792,e_26_815,e_71_724,e_71_861,e_94_724,e_94_792,e_94_861])
+		on( 500, [e_26_792,e_49_861,e_71_861,e_94_724,e_94_792])
+		on( 500, [e_26_792,e_26_861,e_49_861,e_94_724,e_94_792])
+		on( 500, [e_26_792,e_26_861,e_94_724,e_94_792])
+		
+		stamp = 'drop_'+str(DROPLET+1)+'_detection_'+str(i)		
+		get_timestamp(id=stamp)
+		fluor_read(stamp)
+		
+		on( 500, [e_26_769,e_26_861,e_94_724,e_94_792,e_94_815])
+		on( 500, [e_26_747,e_26_769,e_26_861,e_49_861,e_94_724,e_94_792,e_94_815])
+		on( 500, [e_26_724,e_26_747,e_26_861,e_49_861,e_94_724,e_94_792,e_94_815])
+		on( 500, [e_26_724,e_26_861,e_94_724,e_94_815,e_94_838])
+		on( 500, [e_26_724,e_26_861,e_94_724,e_94_838,e_94_861])
+		on( 500, [e_26_724,e_26_861,e_94_724,e_94_861])
+
+		stamp = 'drop_'+str(DROPLET+2)+'_background_'+str(i)
+		get_timestamp(id=stamp)
+		fluor_read(stamp)
+
+		on( 500, [e_26_724,e_26_861,e_94_724,e_94_861])
+		on( 500, [e_26_724,e_26_861,e_94_724,e_94_747,e_94_861])
+		on( 500, [e_26_724,e_26_861,e_94_747,e_94_769,e_94_861])
+		on( 500, [e_26_724,e_26_838,e_26_861,e_49_724,e_94_769,e_94_792,e_94_861])
+		on( 500, [e_26_815,e_26_838,e_49_724,e_71_724,e_94_792,e_94_861])
+		on( 500, [e_26_815,e_26_838,e_49_724,e_71_724,e_71_861,e_94_792,e_94_861])
+		on( 500, [e_26_792,e_26_815,e_71_724,e_71_861,e_94_724,e_94_792,e_94_861])
+		on( 500, [e_26_792,e_49_861,e_71_861,e_94_724,e_94_792])
+		on( 500, [e_26_792,e_26_861,e_49_861,e_94_724,e_94_792])
+		on( 500, [e_26_792,e_26_861,e_94_724,e_94_792])
+		
+		stamp = 'drop_'+str(DROPLET+2)+'_detection_'+str(i)		
+		get_timestamp(id=stamp)
+		fluor_read(stamp)
+		
+		on( 500, [e_26_769,e_26_861,e_94_724,e_94_792,e_94_815])
+		on( 500, [e_26_747,e_26_769,e_26_861,e_49_861,e_94_724,e_94_792,e_94_815])
+		on( 500, [e_26_724,e_26_747,e_26_861,e_49_861,e_94_724,e_94_792,e_94_815])
+		on( 500, [e_26_724,e_26_861,e_94_724,e_94_815,e_94_838])
+		on( 500, [e_26_724,e_26_861,e_94_724,e_94_838,e_94_861])
+		on( 500, [e_26_724,e_26_861,e_94_724,e_94_861])
+
+		stamp = 'drop_'+str(DROPLET+3)+'_background_'+str(i)
+		get_timestamp(id=stamp)
+		fluor_read(stamp)
+
+		on( 500, [e_26_724,e_26_861,e_94_724,e_94_861])
+		on( 500, [e_26_724,e_26_861,e_94_724,e_94_747,e_94_861])
+		on( 500, [e_26_724,e_26_861,e_94_747,e_94_769,e_94_861])
+		on( 500, [e_26_724,e_26_838,e_26_861,e_49_724,e_94_769,e_94_792,e_94_861])
+		on( 500, [e_26_815,e_26_838,e_49_724,e_71_724,e_94_792,e_94_861])
+		on( 500, [e_26_815,e_26_838,e_49_724,e_71_724,e_71_861,e_94_792,e_94_861])
+		on( 500, [e_26_792,e_26_815,e_71_724,e_71_861,e_94_724,e_94_792,e_94_861])
+		on( 500, [e_26_792,e_49_861,e_71_861,e_94_724,e_94_792])
+		on( 500, [e_26_792,e_26_861,e_49_861,e_94_724,e_94_792])
+		on( 500, [e_26_792,e_26_861,e_94_724,e_94_792])
+		
+		stamp = 'drop_'+str(DROPLET+3)+'_detection_'+str(i)		
+		get_timestamp(id=stamp)
+		fluor_read(stamp)
+		
+		on( 500, [e_26_769,e_26_861,e_94_724,e_94_792,e_94_815])
+		on( 500, [e_26_747,e_26_769,e_26_861,e_49_861,e_94_724,e_94_792,e_94_815])
+		on( 500, [e_26_724,e_26_747,e_26_861,e_49_861,e_94_724,e_94_792,e_94_815])
+		on( 500, [e_26_724,e_26_861,e_94_724,e_94_815,e_94_838])
+		on( 500, [e_26_724,e_26_861,e_94_724,e_94_838,e_94_861])
+		on( 500, [e_26_724,e_26_861,e_94_724,e_94_861])
+
+	
+#  GEN METHODS:Immunoassay
+def incub_mix():
+	global DROPLET_SPEED, ITERATIONS
+	for i in range(ITERATIONS):
+		on( DROPLET_SPEED, [e_94_317,e_94_453,e_94_521])
+		on( DROPLET_SPEED, [e_71_317,e_71_453,e_71_521,e_94_317,e_94_453,e_94_521])
+		on( DROPLET_SPEED, [e_49_317,e_49_453,e_49_521,e_71_317,e_71_453,e_71_521])
+		on( DROPLET_SPEED, [e_26_317,e_26_453,e_26_521,e_49_317,e_49_453,e_49_521])
+		on( DROPLET_SPEED, [e_26_317,e_26_453,e_26_521])
+		on( DROPLET_SPEED, [e_26_317,e_26_453,e_26_521,e_49_317,e_49_453,e_49_521])
+		on( DROPLET_SPEED, [e_49_317,e_49_453,e_49_521,e_71_317,e_71_453,e_71_521])
+		on( DROPLET_SPEED, [e_71_317,e_71_453,e_71_521,e_94_317,e_94_453,e_94_521])
+		on( DROPLET_SPEED, [e_116_317,e_116_453,e_116_521,e_94_317,e_94_453,e_94_521])
+		on( DROPLET_SPEED, [e_116_317,e_116_453,e_116_521,e_139_317,e_139_453,e_139_521])
+		on( DROPLET_SPEED, [e_139_317,e_139_453,e_139_521])
+		on( DROPLET_SPEED, [e_116_317,e_116_453,e_116_521,e_139_317,e_139_453,e_139_521])
+		on( DROPLET_SPEED, [e_116_317,e_116_453,e_116_521,e_94_317,e_94_453,e_94_521])
+		on( DROPLET_SPEED, [e_94_317,e_94_453,e_94_521])
+		
+def mag_mix():
+	global DROPLET_SIZE, DROPLET_SPEED, ITERATIONS
+	note('Mixing lanes as a '+ str(DROPLET_SIZE) + ' DU sized drop and at a speed of '  + str(DROPLET_SPEED) + ' ms ' + str(ITERATIONS) + ' times')
+	transport(e_162_724,e_230_724,DROPLET_SIZE, DROPLET_SPEED)
+	for i in range(ITERATIONS):
+		transport(e_275_724,e_162_724, DROPLET_SIZE, DROPLET_SPEED)
+		transport(e_162_724,e_275_724, DROPLET_SIZE, DROPLET_SPEED)
+def crash_wash():
+	on( 500, [e_207_385,e_207_453,e_207_521,e_230_385,e_230_453,e_230_521,e_297_309,e_297_377,e_297_445,e_297_513,e_297_581,e_297_649,e_297_717,e_343_513,e_363_513,e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724])
+	on( 500, [e_116_317,e_116_385,e_116_453,e_116_521,e_116_588,e_116_656,e_116_724,e_207_385,e_207_453,e_207_521,e_230_385,e_230_453,e_230_521,e_343_309,e_363_309,e_94_317,e_94_385,e_94_453,e_94_521,e_94_588,e_94_656,e_94_724])
+	on( 500, [e_116_317,e_116_385,e_116_453,e_116_521,e_116_588,e_116_656,e_116_724,e_139_588,e_139_656,e_139_724,e_207_385,e_207_453,e_207_521,e_230_385,e_230_453,e_230_521])	
+	on( 500, [e_116_317,e_116_385,e_116_453,e_116_521,e_116_588,e_116_656,e_116_724,e_139_588,e_139_656,e_139_724,e_230_385,e_230_453,e_230_521,e_252_453])
+	on( 500, [e_139_588,e_139_656,e_139_724,e_162_588,e_162_656,e_162_724,e_230_385,e_230_453,e_230_521,e_252_385])
+	on( 500, [e_162_724,e_184_724,e_230_385,e_252_385])
+	on( 500, [e_184_588,e_184_656,e_184_724,e_207_588,e_207_656,e_207_724,e_230_588,e_230_656,e_230_724,e_252_588,e_252_656,e_252_724])
+	on( 500, [e_207_588,e_207_656,e_207_724,e_230_588,e_230_656,e_230_724,e_252_588,e_252_656,e_252_724,e_275_588,e_275_656,e_275_724])
+	on( 500, [e_207_588,e_207_656,e_207_724,e_230_588,e_230_656,e_230_724,e_252_588,e_252_656,e_252_724,e_275_588,e_275_656,e_275_724,e_297_588,e_297_656,e_297_724])
+	on( 500, [e_207_588,e_207_656,e_207_724,e_230_588,e_230_656,e_230_724,e_275_588,e_275_656,e_275_724,e_297_588,e_297_656,e_297_724])
+	on( 500, [e_207_588,e_207_656,e_207_724,e_230_588,e_230_656,e_230_724,e_297_309,e_297_377,e_297_445,e_297_513,e_297_581,e_297_588,e_297_649,e_297_656,e_297_717,e_297_724])
+	on( 500, [e_207_588,e_207_656,e_207_724,e_230_588,e_230_656,e_230_724,e_297_309,e_297_377,e_297_445,e_297_513,e_297_581,e_297_649,e_297_717,e_343_581,e_343_649,e_343_717])
+	on( 500, [e_207_588,e_207_656,e_207_724,e_230_588,e_230_656,e_230_724,e_343_581,e_343_649,e_343_717,e_363_581,e_363_649,e_363_717])
+	on( 500, [e_207_588,e_207_656,e_207_724,e_230_588,e_230_656,e_230_724,e_363_581,e_363_649,e_363_717])
+
+def split_off_1DU():	
+	on( 500, [e_207_317,e_207_385,e_207_453,e_207_521,e_207_588,e_207_656,e_207_724])
+	on( 500, [e_207_317,e_207_385,e_207_453,e_207_521,e_207_588,e_207_656,e_207_724,e_230_317])
+	on( 500, [e_230_317,e_252_317])
+	on( 500, [e_230_317,e_252_317,e_275_317])
+	on( 500, [e_230_317,e_275_317])
+	on( 500, [e_207_317,e_230_317,e_297_317])
+	on( 500, [e_207_317,e_230_317,e_297_309,e_297_377,e_297_445,e_297_513,e_297_581,e_297_649,e_297_717])
+	on( 500, [e_207_317,e_230_317,e_343_309])
+	on( 500, [e_207_317,e_230_317,e_363_309])
+
+
+#GEN METHODS: Detections
+def fluor_read(fluorescence_subject_name):
+	fluorimeter_detect(id=fluorescence_subject_name, detector_id=0)
+	'''
+	global fluor_read_num
+	fluor_read_num=fluor_read_num+1;
+	REG_INDEX_FLUOR_REF_RESULT = 38
+	REG_INDEX_STS_REF   = 55
+	DETECTOR_FLOAT_TYPE = 2
+	FLUORIMETER = 0
+	ILLUMINATOR = 1
+	detector_get_value(id="fref_"+str(fluor_read_num), detector_id=FLUORIMETER, ref_index=REG_INDEX_FLUOR_REF_RESULT, result_type=DETECTOR_FLOAT_TYPE, reserved=0, wait_msg=500)
+	'''
+
+def abs_read(absorbance_subject_name):
+	# Get STS Spectrum
+	SPECTROMETER_ID = 1
+	SPEC_CMD_STS_OP_CAPTURE_DARK = 1
+	SPEC_CMD_STS_OP_CAPTURE_LIGHT = 2
+	SPEC_CMD_STS_OP_CAPTURE = 3
+	SPEC_CMD_STS_GET_DARK_SPECTRUM = 7
+	SPEC_CMD_STS_GET_LIGHT_SPECTRUM = 8 
+	RESERVED = 0
+	detect(id="abs_"+absorbance_subject_name, detector_id=SPECTROMETER_ID, arg1=SPEC_CMD_STS_OP_CAPTURE_LIGHT, arg2=SPEC_CMD_STS_GET_LIGHT_SPECTRUM, arg3=RESERVED, wait_msg=5000)
+
+	# Get Reference Value
+	REG_INDEX_FLUOR_REF_RESULT = 38
+	REG_INDEX_STS_REF   = 55
+	DETECTOR_FLOAT_TYPE = 2
+	FLUORIMETER = 0
+	ILLUMINATOR = 1
+	detector_get_value(id="aref_"+absorbance_subject_name, detector_id= ILLUMINATOR, ref_index=REG_INDEX_STS_REF, result_type=DETECTOR_FLOAT_TYPE, reserved=0, wait_msg=500)
+	
+
+
+main()

@@ -1,0 +1,170 @@
+# Initialization
+system_init()
+use_cartridge(3382)
+meta("reservoirs", [e_214_918,e_233_918,e_266_918,e_298_918])
+
+def main():
+	meta("protocol_name", "Testing Transport Function")
+	#transport('e_162_385','e_298_918', 3, 1000)
+	transport([e_252_317,e_252_588], 3, 1000)
+	transport([e_252_588,e_252_317], 2, 1000)
+	transport([e_252_317,e_252_588], 1, 1000)
+	transport([e_252_588,e_252_317], 1, 2000)
+	transport([e_252_588,e_252_317], 1, 2000)
+	transport([e_320_74,e_331_918], 2, 1000)
+	
+def move(path_electrodes, diluent_size, diluent_speed):
+	"""
+	Purpose: Generalizable movement of droplets around the cartridge
+	Assumes a start point diluent spot at
+		path_electrodes - array of arrays of electrodes to activate
+		diluent_size - int (integer) spread of droplets over space - default is 1
+		diluent_speed - int (integer) in ms that show how fast it should move a typical value - default is 500
+	
+	"""
+	if diluent_speed < 250:
+		raise ValueError('You should be careful that you aren''t moving the droplets too fast')
+	# number of steps needed to perform three phases
+	note(str(path_electrodes))
+	steps = len(path_electrodes)+diluent_size-1
+	# the sequences of electrodes that will be activated, list of list
+	sequences = []
+	# number of steps  of build out phase is equal to diluent size
+	build_out = diluent_size
+	# of steps of build in phase is also length of diluent size
+	build_in = steps-diluent_size
+	# begins with size 0
+	current_size = 1
+	
+	for step in range(steps):
+		temp = []
+		if step<build_out:
+			# grabs the first N electrodes droplet and grows by 1 each time
+			sequences.append(path_electrodes[0:current_size])
+			current_size += 1
+			note(sequences)
+		elif step>=build_out and step<build_in:
+			# moves at current size and goes until the build in phase begins
+			sequences.append(path_electrodes[step-build_out+1:step+1])
+		elif step>=build_in:
+			if diluent_size >1:
+				sequences.append(path_electrodes[step-build_out+1:step-1+current_size])
+			else:
+				sequences.append(path_electrodes[step+1-build_out:step+current_size])		
+			current_size-=1
+			# shrinks droplet
+	# compiles sequences and moves at that
+	for seq in sequences:
+		on(diluent_speed, seq)
+
+class Graph:
+    def __init__(self):
+	"""
+	constructor
+	nodes - (list) in a graph the nodes defined the points to check along the graph
+	edges - (defaultdict) defined as key, value pairs from one node to another, defines the relationships between the nodes
+	distances - (dict) keys are tuples of the node pairs and their values are ints of distances
+	"""
+	
+        from collections import defaultdict
+	self.nodes = []
+        self.edges = defaultdict(list)
+        self.distances = {}
+
+    def add_node(self, value):
+	"""
+	Adds single nodes to a graph
+	"""
+        self.nodes.append(value)
+
+    def add_nodes(self, values):
+	"""
+	Dumps a bunch of nodes in a graph
+	"""
+        self.nodes.extend(values)
+
+    def add_edge(self, from_node, to_node, distance):
+	"""
+	Populates the edge and distance properties
+	"""
+        self.edges[from_node].append(to_node)
+        self.edges[to_node].append(from_node)
+        self.distances[(from_node, to_node)] = distance
+        self.distances[(to_node, from_node)] = distance
+
+def transport(nodes, droplet_size, droplet_speed):
+    """
+    graph object defined by the class Graph has node, edges, and distance properties
+    Commented and bug fixed algorithm based from here w/ additions for returning
+    a path
+    https://gist.github.com/econchick/4666413#file-gistfile1-py
+
+    """
+    # so that the user can keep it in F2 format without having to add too much
+    [initial_node, final_node] = [str(i) for i in nodes]
+    # Specific definition for the 3382 cartridge - nodes index 0, segments  indices 1 & 2, distance 3 
+    graph_definiton = [['e_363_309', 'e_256_74', 'e_320_74', '1'], ['e_343_309', 'e_185_74', 'e_256_74', '1'], ['e_297_309', 'e_117_74', 'e_185_74', '1'], ['e_297_317', 'e_117_74', 'e_56_109', '1'], ['e_275_317', 'e_18_109', 'e_56_109', '3'], ['e_252_317', 'e_18_146', 'e_56_109', '2'], ['e_230_317', 'e_18_184', 'e_56_109', '1'], ['e_207_317', 'e_18_184', 'e_18_222', '1'], ['e_184_317', 'e_18_146', 'e_18_184', '1'], ['e_162_317', 'e_18_109', 'e_18_146', '1'], ['e_139_317', 'e_18_222', 'e_18_260', '1'], ['e_116_317', 'e_18_260', 'e_26_272', '1'], ['e_363_377', 'e_26_272', 'e_26_295', '1'], ['e_343_377', 'e_26_295', 'e_26_317', '1'], ['e_297_377', 'e_26_317', 'e_49_317', '1'], ['e_297_385', 'e_26_317', 'e_26_340', '1'], ['e_275_385', 'e_26_340', 'e_26_362', '1'], ['e_252_385', 'e_26_362', 'e_26_385', '1'], ['e_230_385', 'e_26_385', 'e_26_408', '1'], ['e_207_385', 'e_26_408', 'e_26_430', '1'], ['e_184_385', 'e_26_430', 'e_26_453', '1'], ['e_162_385', 'e_26_453', 'e_49_453', '1'], ['e_139_385', 'e_26_453', 'e_26_475', '1'], ['e_116_385', 'e_26_475', 'e_26_498', '1'], ['e_363_445', 'e_26_498', 'e_26_521', '1'], ['e_343_445', 'e_26_521', 'e_49_521', '1'], ['e_297_445', 'e_26_521', 'e_26_543', '1'], ['e_297_453', 'e_26_543', 'e_26_566', '1'], ['e_275_453', 'e_26_566', 'e_26_588', '1'], ['e_252_453', 'e_26_588', 'e_26_611', '1'], ['e_230_453', 'e_26_611', 'e_26_634', '1'], ['e_207_453', 'e_26_634', 'e_26_656', '1'], ['e_184_453', 'e_26_656', 'e_49_656', '1'], ['e_162_453', 'e_26_656', 'e_26_679', '1'], ['e_139_453', 'e_26_679', 'e_26_702', '1'], ['e_116_453', 'e_26_702', 'e_26_724', '1'], ['e_363_513', 'e_26_724', 'e_49_724', '1'], ['e_343_513', 'e_26_724', 'e_26_747', '1'], ['e_297_513', 'e_26_747', 'e_26_769', '1'], ['e_297_521', 'e_26_769', 'e_26_792', '1'], ['e_275_521', 'e_26_792', 'e_26_815', '1'], ['e_252_521', 'e_26_815', 'e_26_838', '1'], ['e_230_521', 'e_26_838', 'e_26_861', '1'], ['e_207_521', 'e_26_861', 'e_49_861', '1'], ['e_184_521', 'e_49_861', 'e_71_861', '1'], ['e_162_521', 'e_49_724', 'e_71_724', '1'], ['e_139_521', 'e_49_656', 'e_71_656', '1'], ['e_116_521', 'e_49_521', 'e_71_521', '1'], ['e_363_581', 'e_49_453', 'e_71_453', '1'], ['e_343_581', 'e_49_317', 'e_71_317', '1'], ['e_297_581', 'e_71_317', 'e_94_317', '1'], ['e_297_588', 'e_94_317', 'e_94_340', '1'], ['e_275_588', 'e_94_340', 'e_94_362', '1'], ['e_252_588', 'e_94_362', 'e_94_385', '1'], ['e_230_588', 'e_94_385', 'e_94_408', '1'], ['e_207_588', 'e_94_408', 'e_94_430', '1'], ['e_184_588', 'e_94_430', 'e_94_453', '1'], ['e_162_588', 'e_71_453', 'e_94_453', '1'], ['e_139_588', 'e_94_453', 'e_94_475', '1'], ['e_116_588', 'e_94_475', 'e_94_498', '1'], ['e_363_649', 'e_94_498', 'e_94_521', '1'], ['e_343_649', 'e_71_521', 'e_94_521', '1'], ['e_297_649', 'e_94_521', 'e_94_543', '1'], ['e_297_656', 'e_94_543', 'e_94_566', '1'], ['e_275_656', 'e_94_566', 'e_94_588', '1'], ['e_252_656', 'e_94_588', 'e_94_611', '1'], ['e_230_656', 'e_94_611', 'e_94_634', '1'], ['e_207_656', 'e_94_634', 'e_94_656', '1'], ['e_184_656', 'e_71_656', 'e_94_656', '1'], ['e_162_656', 'e_94_656', 'e_94_679', '1'], ['e_139_656', 'e_94_679', 'e_94_702', '1'], ['e_116_656', 'e_94_702', 'e_94_724', '1'], ['e_363_717', 'e_71_724', 'e_94_724', '1'], ['e_343_717', 'e_94_724', 'e_94_747', '1'], ['e_297_717', 'e_94_747', 'e_94_769', '1'], ['e_297_724', 'e_94_769', 'e_94_792', '1'], ['e_275_724', 'e_94_792', 'e_94_815', '1'], ['e_252_724', 'e_94_815', 'e_94_838', '1'], ['e_230_724', 'e_94_838', 'e_94_861', '1'], ['e_207_724', 'e_71_861', 'e_94_861', '1'], ['e_184_724', 'e_116_317', 'e_94_317', '1'], ['e_162_724', 'e_116_317', 'e_139_317', '1'], ['e_139_724', 'e_139_317', 'e_162_317', '1'], ['e_116_724', 'e_162_317', 'e_184_317', '1'], ['e_352_814', 'e_184_317', 'e_207_317', '1'], ['e_325_814', 'e_207_317', 'e_230_317', '1'], ['e_297_814', 'e_230_317', 'e_252_317', '1'], ['e_270_814', 'e_252_317', 'e_275_317', '1'], ['e_243_814', 'e_275_317', 'e_297_317', '1'], ['e_215_814', 'e_297_309', 'e_297_317', '1'], ['e_184_826', 'e_297_309', 'e_343_309', '1'], ['e_184_838', 'e_343_309', 'e_363_309', '1'], ['e_162_838', 'e_343_377', 'e_363_377', '1'], ['e_139_838', 'e_297_377', 'e_343_377', '1'], ['e_116_838', 'e_297_377', 'e_297_385', '1'], ['e_331_918', 'e_275_385', 'e_297_385', '1'], ['e_298_918', 'e_252_385', 'e_275_385', '1'], ['e_266_918', 'e_230_385', 'e_252_385', '1'], ['e_233_918', 'e_207_385', 'e_230_385', '1'], ['e_214_918', 'e_184_385', 'e_207_385', '1'], ['e_195_918', 'e_162_385', 'e_184_385', '1'], ['e_162_943', 'e_139_385', 'e_162_385', '1'], ['e_162_951', 'e_116_385', 'e_139_385', '1'], ['e_139_951', 'e_116_385', 'e_94_385', '1'], ['e_116_951', 'e_116_453', 'e_94_453', '1'], ['e_94_317', 'e_116_453', 'e_139_453', '1'], ['e_94_340', 'e_139_453', 'e_162_453', '1'], ['e_94_362', 'e_162_453', 'e_184_453', '1'], ['e_94_385', 'e_184_453', 'e_207_453', '1'], ['e_94_408', 'e_207_453', 'e_230_453', '1'], ['e_94_430', 'e_230_453', 'e_252_453', '1'], ['e_94_453', 'e_252_453', 'e_275_453', '1'], ['e_94_475', 'e_275_453', 'e_297_453', '1'], ['e_94_498', 'e_297_445', 'e_297_453', '1'], ['e_94_521', 'e_297_445', 'e_343_445', '1'], ['e_94_543', 'e_343_445', 'e_363_445', '1'], ['e_94_566', 'e_343_513', 'e_363_513', '1'], ['e_94_588', 'e_297_513', 'e_343_513', '1'], ['e_94_611', 'e_297_513', 'e_297_521', '1'], ['e_94_634', 'e_275_521', 'e_297_521', '1'], ['e_94_656', 'e_252_521', 'e_275_521', '1'], ['e_94_679', 'e_230_521', 'e_252_521', '1'], ['e_94_702', 'e_207_521', 'e_230_521', '1'], ['e_94_724', 'e_184_521', 'e_207_521', '1'], ['e_94_747', 'e_162_521', 'e_184_521', '1'], ['e_94_769', 'e_139_521', 'e_162_521', '1'], ['e_94_792', 'e_116_521', 'e_139_521', '1'], ['e_94_815', 'e_116_521', 'e_94_521', '1'], ['e_94_838', 'e_116_588', 'e_94_588', '1'], ['e_94_861', 'e_116_588', 'e_139_588', '1'], ['e_94_883', 'e_139_588', 'e_162_588', '1'], ['e_94_906', 'e_162_588', 'e_184_588', '1'], ['e_94_929', 'e_184_588', 'e_207_588', '1'], ['e_94_951', 'e_207_588', 'e_230_588', '1'], ['e_71_317', 'e_230_588', 'e_252_588', '1'], ['e_71_453', 'e_252_588', 'e_275_588', '1'], ['e_71_521', 'e_275_588', 'e_297_588', '1'], ['e_71_656', 'e_297_581', 'e_297_588', '1'], ['e_71_724', 'e_297_581', 'e_343_581', '1'], ['e_71_861', 'e_343_581', 'e_363_581', '1'], ['e_49_317', 'e_343_649', 'e_363_649', '1'], ['e_49_453', 'e_297_649', 'e_343_649', '1'], ['e_49_521', 'e_297_649', 'e_297_656', '1'], ['e_49_656', 'e_275_656', 'e_297_656', '1'], ['e_49_724', 'e_252_656', 'e_275_656', '1'], ['e_49_861', 'e_230_656', 'e_252_656', '1'], ['e_26_317', 'e_207_656', 'e_230_656', '1'], ['e_26_340', 'e_184_656', 'e_207_656', '1'], ['e_26_362', 'e_162_656', 'e_184_656', '1'], ['e_26_385', 'e_139_656', 'e_162_656', '1'], ['e_26_408', 'e_116_656', 'e_139_656', '1'], ['e_26_430', 'e_116_656', 'e_94_656', '1'], ['e_26_453', 'e_116_724', 'e_94_724', '1'], ['e_26_475', 'e_116_724', 'e_139_724', '1'], ['e_26_498', 'e_139_724', 'e_162_724', '1'], ['e_26_521', 'e_162_724', 'e_184_724', '1'], ['e_26_543', 'e_184_724', 'e_207_724', '1'], ['e_26_566', 'e_207_724', 'e_230_724', '1'], ['e_26_588', 'e_230_724', 'e_252_724', '1'], ['e_26_611', 'e_252_724', 'e_275_724', '1'], ['e_26_634', 'e_275_724', 'e_297_724', '1'], ['e_26_656', 'e_297_717', 'e_297_724', '1'], ['e_26_679', 'e_297_717', 'e_343_717', '1'], ['e_26_702', 'e_343_717', 'e_363_717', '1'], ['e_26_724', 'e_116_838', 'e_94_838', '1'], ['e_26_747', 'e_116_838', 'e_139_838', '1'], ['e_26_769', 'e_139_838', 'e_162_838', '1'], ['e_26_792', 'e_162_838', 'e_184_838', '1'], ['e_26_815', 'e_184_826', 'e_184_838', '1'], ['e_26_838', 'e_184_826', 'e_215_814', '1'], ['e_26_861', 'e_215_814', 'e_243_814', '1'], ['e_320_74', 'e_243_814', 'e_270_814', '1'], ['e_256_74', 'e_270_814', 'e_297_814', '1'], ['e_185_74', 'e_297_814', 'e_325_814', '1'], ['e_117_74', 'e_325_814', 'e_352_814', '1'], ['e_56_109', 'e_94_861', 'e_94_883', '1'], ['e_18_109', 'e_94_883', 'e_94_906', '1'], ['e_18_146', 'e_94_906', 'e_94_929', '1'], ['e_18_184', 'e_94_929', 'e_94_951', '1'], ['e_18_222', 'e_116_951', 'e_94_951', '1'], ['e_18_260', 'e_116_951', 'e_139_951', '1'], ['e_26_272', 'e_139_951', 'e_162_951', '1'], ['e_26_295', 'e_162_943', 'e_162_951', '1'], ['', 'e_162_943', 'e_195_918', '1'], ['', 'e_195_918', 'e_214_918', '1'], ['', 'e_214_918', 'e_233_918', '1'], ['', 'e_233_918', 'e_266_918', '1'], ['', 'e_266_918', 'e_298_918', '1'], ['', 'e_298_918', 'e_331_918', '1']]
+    # graph object needs edges and nodes populated-done here
+    graph = Graph()
+    graph.add_nodes([line[0] for line in graph_definiton])
+    segment_info = [line[1:4] for line in graph_definiton]
+    for iter, seg in enumerate(segment_info):
+	graph.add_edge(seg[0], seg[1], int(seg[2]))
+
+    visited = {initial_node: 0}
+    path = {}
+
+    nodes = graph.nodes
+    iterator = 0
+    while nodes:
+	iterator+=1
+        min_node = None
+        for node in nodes:
+	    # grabs one node to evaluate - grabs the closest node to the initial node with the lowest weighting not already checked
+            if node in visited:
+		note(str(node) + ' ' +str(iterator))
+		# on first iteration of loop always assigns min_node to first node, this ensures that if len = 1, the program has something to check
+                if min_node is None:
+                    min_node = node
+		    note("Does this once")
+		# Now min_node is no longer none, checks visited node has the lowest weight
+                elif visited[node] < visited[min_node]:
+                    min_node = node
+		    note(str(node) + ' ' +str(iterator))
+	
+	# this will break when there are no nodes left i.e. all have been visited and removed
+        if min_node is None:
+            break
+
+        # takes out the node that has been visited, each while loop will remove the one most recently visited
+        nodes.remove(min_node)
+	
+	# the current's node has an associated weight from previous loops, it's checked here
+        current_weight = visited[min_node]
+	
+	# goes through all the edges that are connected to the current node
+        for edge in graph.edges[min_node]:
+            # adds the associated weights on top of that each instance
+            weight = current_weight + graph.distances[(min_node, edge)]
+            if edge not in visited or weight < visited[edge]:
+                # if the connected node hasn't been visited or the weight is lower to get to that node from the current node populate these
+		# this edge has a new faster way to get there, time to add it to visited the edges fastest way to get there is the current node
+		visited[edge] = weight
+		# note that both of these may change over time as faster optimums are found
+                path[edge] = min_node
+
+    # routes back from final node to the start node, since path is the most optimal way of getting from any point to another point
+    shortest_path = []
+    note(str(path))
+    next_connection = path[final_node]
+    shortest_path.append(final_node)
+    shortest_path.append(next_connection)
+    while initial_node not in shortest_path:
+	# breaks when it gets back to the initial node,
+	# otherwise, keep routing from node back to its shortest edge
+	    next_connection = path[next_connection]
+	    shortest_path.append(next_connection)
+    pathway = [i for i in shortest_path]
+    move(pathway, droplet_size, droplet_speed)
+
+main()
